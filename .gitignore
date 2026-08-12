@@ -1,0 +1,31 @@
+# Python/runtime
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local database and logs
+*.sqlite3
+*.sqlite3-*
+*.db
+*.log
+
+# Uploaded/private runtime data
+imports/inbox/*
+imports/archive/*
+assets/uploads/*
+
+# Keep runtime directories visible in git
+!imports/inbox/.gitkeep
+!imports/archive/.gitkeep
+!assets/uploads/.gitkeep
+!assets/uploads/bank-logos/.gitkeep
+
+# Local environment files
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/

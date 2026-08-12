@@ -1,0 +1,3 @@
+# The app itself uses Python stdlib + SQLite.
+# pypdf is optional, but enables the current PDF text-extraction hook.
+pypdf>=5.0.0
