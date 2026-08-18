@@ -21,6 +21,9 @@ assets/uploads/*
 !assets/uploads/.gitkeep
 !assets/uploads/bank-logos/.gitkeep
 
+# Private bank statement samples (real financial data)
+bank_statements_for_testing/
+
 # Local environment files
 .env
 .env.*
@@ -29,3 +32,6 @@ assets/uploads/*
 .DS_Store
 .idea/
 .vscode/
+
+# Categorization experiment outputs (real financial data)
+experiments/

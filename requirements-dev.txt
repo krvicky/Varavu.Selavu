@@ -1,0 +1,3 @@
+# Dev-only dependencies (testing). Not required to run the app.
+pytest>=8
+openpyxl>=3.1  # scripts/experiment_sheet.py (categorization review workbook)

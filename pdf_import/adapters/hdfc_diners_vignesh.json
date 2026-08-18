@@ -1,0 +1,38 @@
+{
+  "source_id": "hdfc_diners_vignesh",
+  "bank_label": "HDFC Diners",
+  "schema_version": 1,
+  "statement_type": "credit_card",
+  "header_signature": ["DATE & TIME", "AMOUNT"],
+  "column_map": {
+    "date": 0,
+    "time": null,
+    "description": -4,
+    "reference": null,
+    "debit": null,
+    "credit": null,
+    "amount": -2,
+    "dr_cr_flag": null,
+    "balance": null
+  },
+  "date_format": "%d/%m/%Y %H:%M",
+  "amount_convention": "credit_card_flip",
+  "decimal_style": "indian",
+  "wrap_merge": "none",
+  "skip_row_patterns": [
+    "DATE & TIME",
+    "^Domestic Transactions",
+    "^International Transactions",
+    "CARDHOLDER NAME",
+    "^\\(if any\\)"
+  ],
+  "credit_description_patterns": ["PYMT RECD", "PAYMENT RECEIVED", "^REFUND"],
+  "statement_meta": {
+    "period_regex": "Billing Period\\s*\\|\\s*(\\d{1,2} \\w+, \\d{4})\\s*-\\s*(\\d{1,2} \\w+, \\d{4})",
+    "opening_balance_regex": "Opening Balance[:\\s]*([\\d,]+\\.\\d{2})",
+    "closing_balance_regex": "Closing Balance[:\\s]*([\\d,]+\\.\\d{2})",
+    "previous_balance_regex": null,
+    "total_dues_regex": "CURRENT DUES C\\s*([\\d,]+\\.\\d{2})",
+    "account_number_regex": "Credit Card No\\.\\s*\\|\\s*([0-9X]+)"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "source_id": "kotak_vignesh",
+  "bank_label": "Kotak Mahindra Bank",
+  "schema_version": 1,
+  "statement_type": "bank_account",
+  "header_signature": ["TRANSACTION DATE", "BALANCE"],
+  "column_map": {
+    "date": 2,
+    "time": null,
+    "description": 3,
+    "reference": 4,
+    "debit": null,
+    "credit": null,
+    "amount": 5,
+    "dr_cr_flag": null,
+    "balance": 6
+  },
+  "date_format": "%d %b %Y",
+  "amount_convention": "single_signed",
+  "decimal_style": "indian",
+  "wrap_merge": "none",
+  "skip_row_patterns": ["TRANSACTION DATE", "OPENING BALANCE", "^TOTAL", "Page \\d+"],
+  "statement_meta": {
+    "period_regex": "Account Statement\\s+(\\d{1,2} \\w+ \\d{4})\\s*-\\s*(\\d{1,2} \\w+ \\d{4})",
+    "opening_balance_regex": "Opening Balance[:\\s]*([\\d,]+\\.\\d{2})",
+    "closing_balance_regex": "Closing Balance[:\\s]*([\\d,]+\\.\\d{2})",
+    "previous_balance_regex": null,
+    "total_dues_regex": null,
+    "account_number_regex": "Account #\\s*(\\d+)",
+    "balance_source": "running_balance",
+    "transaction_order": "descending"
+  }
+}

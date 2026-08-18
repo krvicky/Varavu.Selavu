@@ -1,3 +1,8 @@
 # The app itself uses Python stdlib + SQLite.
 # pypdf is optional, but enables the current PDF text-extraction hook.
 pypdf>=5.0.0
+
+# PDF bank-statement parsing (pdf_import package)
+docling>=2.15,<3
+pikepdf>=9.0
+cryptography>=42
