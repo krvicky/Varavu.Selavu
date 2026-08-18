@@ -1,5 +1,61 @@
 # BUILD_NOTES.md
 
+## 2026-08-18 — Nanny salary + Loan EMI rules (regex match type), broader boot backfill
+
+- Rule engine: single `rule_matches()` used by `apply_rules()` and `rule_conflicts()`; new match type **`regex`** (case-insensitive `re.search`; invalid pattern never matches). Rules page offers it.
+- New built-in rules (0.9, outrank "Family transfers" 0.86): `Nanny salary` (`SENTIMPS.*NANNY NAME` → Home & Utilities / Household Help & Services, fixed, spend, note "Nanny salary" via `DEFAULT_RULE_NOTES`) and `Home loan EMI (Jananiya)` (`NEFT.*JANANIYA R/BANK OF` → Home & Utilities / Loan EMI, fixed, spend). Other Jananiya/Sujatha transfers still hit Family transfers.
+- Startup backfill now also re-runs rows still bound to a rule (`category IS NULL OR rule_id != ''`), so rules that were edited or outranked re-file their rows on the next boot; manual overrides and import-provided categories are never touched. Pattern-sync skips regex/exact rules.
+
+## 2026-08-18 — Bank internal transfers · additive default-rule patterns · "Groceries" subcategory
+
+- New category **Bank internal transfers** (`HIDDEN_CATEGORIES`): the `FD auto-sweep` rule (`SWEEP TRANSFER|SWEEP TRF|FD PREMAT PROCEEDS`, flow `transfer`, excluded) now assigns it; `RULE_UPDATES` sets it on existing DBs. Rows in a hidden category are dropped from `dashboard_data()` before any sum and excluded from `breakdown()` **regardless of flow** (so a manual move there also disappears from rollups). They stay in the Transactions ledger and are filterable/assignable (listed in the Category dropdown and drawer).
+- **Default-rule patterns are now additive on boot:** `seed_defaults()` merges each `DEFAULT_RULES` pattern into the DB row's pattern (case-insensitive union, DB alternatives first) so new built-in alternatives reach existing DBs while user-added ones survive. This is what was keeping `BLINK COMMERCE PVT …` rows uncategorised (the DB still had `BLINKIT|INSTAMART|FIRSTCLUB|ZEPTO`); the startup backfill then categorises them.
+- Subcategory **"Groceries / Quick Commerce" → "Groceries"** via `TAXONOMY_MIGRATIONS` (rules, transactions, manual_overrides, baselines) + taxonomy/rules/seed sample updated.
+- Verified on a copy of the real DB: 82 rows → Bank internal transfers, 0 SWEEP/FD left uncategorised, Blink Commerce rows → Groceries & Household / Groceries, no old label anywhere, rollups exclude the transfers.
+
+## 2026-08-18 — Transactions: count, multi-select Flow, sticky filters · Income categories · Dashboard inflow sources + click-through
+
+- **Transactions heading** shows the filtered count: `Transactions (130)` (all pages).
+- **Flow filter is an Excel-style multi-select** (`render_multi_select` + `MULTI_SELECT_SCRIPT`): button + panel with an "Any flow" master checkbox (all/none/indeterminate), one checkbox per flow, Apply/Clear. URL `flow=spend,fee` (comma-joined; `flow_values()` validates; all flows selected == no filter). Chip "Flow: Money out, Fee".
+- **Sticky filter card** (≥768px): `.tx-filter-card{position:sticky; top:var(--header-h)+8px}` with a stuck-shadow via an IntersectionObserver sentinel. On mobile the form collapses in a `<details>` ("Filters · N active", open when filters are active) and a floating "Filters" button appears once the card scrolls away. **Global fix:** removed `overflow-x:hidden` from `body` — it made `body` the scroll container so *no* `position:sticky` (including the header) actually stuck; `html{overflow-x:hidden}` still clips.
+- **Income categories** `INCOME_CATEGORIES = ["Salary", "Dividend income"]` (chips/filters/drawer list them; the money-out breakdown, Baselines and creep never do). Rules: `Salary` (contains `EMPLOYER PAYROLL`) → Salary; `Dividend income` (`NACH-ECS-CR|NACH-10-CR`) → Dividend income; `Interest received` (`INT.PD:`) stays uncategorised income. `RULE_UPDATES` in `seed_defaults()` migrates existing DBs (sets rule_salary's category; deletes the old uncustomised `rule_dividends___interest`); the startup backfill now re-runs every uncategorised, non-overridden row (rule or not), so old salary/dividend rows pick up their categories on the next boot.
+- **Dashboard:** `dashboard_data()` returns `income_flows` (money-in by category, uncategorised → "Other inflow") and a real `summary.dividends` (4th KPI tile). `/api/sankey` puts one node per income source on the left (nodes carry `kind` + `category`; links unrounded so totals stay exact). Waterfall starts with one bar per income source; treemap/bars get an "Inflow" legend row. All charts are clickable: category → `/transactions?month=…&category=…`, income source → `…&flow=income`; Surplus/Shortfall aren't links.
+
+## 2026-08-18 — "Pocket change": small uncategorised money-out is auto-filed
+
+- New parent category **Pocket change** (`POCKET_CHANGE`, chip slug `pocket`, icon `coins`). `apply_rules()` fallback: only when **no rule matched**, `flow_type ∈ {spend, fee}`, `amount < 0` and `|amount| < threshold` → category Pocket change, classification `controllable`, `rule_id=rule_pocket_change`, confidence 0.8 (so no review item). Money-in, transfers, card payments never qualify; real rules, "Remember" rules and manual overrides always win. A category supplied by the import itself is never replaced by the fallback (guard in `reapply_rules`).
+- Threshold: setting `pocket_change_threshold` (default ₹200, 0 = off) via `pocket_change_threshold()` / `set_pocket_change_threshold()`. Admin page card "Pocket change threshold" → `POST /admin/pocket-change` validates, saves, runs `reapply_rules()` and reports how many rows were re-filed. Lowering/disabling the threshold puts engine-filed Pocket change rows back to uncategorised (review item rebuilt); manually overridden rows are untouched.
+- **Startup backfill:** `init_db()` now runs `reapply_rules(conn, only_uncategorised=True)` on every boot (audit `startup_backfill` when anything changed), so rows imported before a rule or the Pocket change fallback existed get filed without pressing Save. Only uncategorised, rule-less, non-overridden rows are touched; a row you sent back for review (override with `category=''`) stays uncategorised because overrides win.
+- Breakdown panel hides a lone "(no subcategory)" child row.
+- Tests: `tests/test_rules_engine.py` (fallback boundaries, money-in/transfer exclusion, rule precedence, reapply on threshold change, import-provided category guard), `tests/test_transactions_page.py` (filter/breakdown/admin endpoint round-trip). Existing tests that used −100 unknown rows now use amounts above the threshold.
+
+## 2026-08-18 — Edit drawer: "Uncategorised — send back for review"
+
+- Category combobox (Transactions + Review drawers) has a pinned dashed option **Uncategorised — send back for review**. Picking it clears category+subcategory (subcategory input disabled), keeps classification/flow, unchecks+disables "Remember" (note: "Can't remember an unknown"), and submits `action=uncategorise`.
+- `/review` POST `action=uncategorise`: override stores `category=''`/`subcategory=''` (an override NULL means "no change"; `NULLIF(…,'')` in `EFFECTIVE_TX_COLUMNS` turns it back into None everywhere), does **not** resolve review items, and inserts one with reason `manual_uncategorised` ("Sent back for review") via `create_review_item`. No rule is created. Toast: "Sent back for review" (Transactions) / "Kept in review — marked as not sure" (Review, row stays in the queue).
+- Review GET now builds items from the effective CTE (`effective_tx_sql`) instead of raw `t.*`, so a row sent back doesn't show its old category as the "best guess"; visibility/seed filtering unchanged.
+
+## 2026-08-18 — Edit drawer: combobox shows all options; "Remember" conflict preview + supersede
+
+- Category/Subcategory comboboxes (Review + Transactions drawers): when the text is empty or exactly equals a known option the **full list** is shown with the current one highlighted (was: filtered down to itself, so a pre-filled field looked like it had no other options). Focus selects the text; a chevron caret marks it as a dropdown.
+- `rule_conflicts()` (next to `apply_rules`) lists every enabled rule that would match a merchant, in engine order, with `same_outcome` / `remembered` flags. `GET /api/rule-conflicts?transaction_id&category&subcategory` exposes it.
+- Both drawers: turning on "Remember for future matches" (or changing category/subcategory while it's on) fetches the preview and shows an amber note — *Overrides '<rule>' (…)* / *Replaces your earlier rule (…)* / *Already covered by '<rule>'*. The remember copy now links to Rules → Re-apply (re-apply stays a manual action).
+- `/review` POST remember branch: an older remembered rule for the same merchant + account is disabled (`supersede_rule_from_remember` audit) before the new one is written, so two 0.94 rules never tie. JSON gains `superseded` and `conflicts`; existing keys unchanged. Toasts mention replaced rules.
+
+## 2026-08-17 — Transactions page revamp (drill-down breakdown + editable, paginated table)
+
+`/transactions` is now the drill-down for the Dashboard's category split.
+
+Changes:
+- New **Breakdown** card between the filters and the table with a `Category | Account | Person` switch. Category rows expand into subcategory rows (incl. a "(no subcategory)" bucket); every row is a link that applies/removes that facet as a filter. Money-out basis (spend+fee net of refund/reversal, clamped ≥0) is identical to `dashboard_data`, so the totals match the Dashboard. The displayed facet's own filter is ignored by the panel so the list never collapses to one row.
+- Page defaults to the Dashboard's session month (`self.active_month()`); `?month=all` shows everything. Transactions never writes the session month.
+- New filters: Subcategory (cascades from Category) and Payer. Active-filter chips remove one param and keep the rest.
+- Table moved to the bottom, paginated 50/page with a pager, sortable by Date / Amount (|amount|).
+- Click any row → edit drawer (category / subcategory / classification / note, "remember" rule toggle, transfer/exclude). Posts to `/review` with `origin=transactions`; the endpoint now edits against the *effective* row (earlier override fields survive), accepts `classification`, and treats an empty subcategory as "clear" (stored as `''`, normalised to NULL by the overlay). Review-page behaviour is unchanged. Drawer CSS is shared via `DRAWER_CSS` / `DRAWER_MOBILE_CSS`; a `.exclude-confirm[hidden]` rule fixes the confirm strip that was always visible.
+- `effective_transactions()` no longer does an N+1 override query: `effective_tx_sql()` LEFT JOINs the latest override in SQL (`created_at DESC, rowid DESC`), and `query_transactions()` / `breakdown()` / `tx_present_values()` / `taxonomy_options()` all build on it — so deleted/excluded batches and the seed batch stay hidden in every new query. Index `ix_manual_overrides_txn` added in `ensure_schema`.
+
+Tests: `tests/test_effective_transactions.py`, `tests/test_transactions_query.py`, and `tests/test_transactions_page.py` (existing filter tests now pass `month=all` because of the default-month change).
+
 ## 2026-08-11 — Import history UI redesign
 
 Implemented the attached Import Statements UI/UX redesign on `/import`, focused on the Import history table.
