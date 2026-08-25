@@ -58,7 +58,7 @@ PARENT_CATEGORIES = [
     "Pocket change",
 ]
 # Money-in categories: chips/filters/drawer list them, but the money-out breakdown, Baselines and creep-watch never do.
-INCOME_CATEGORIES = ["Salary", "Dividend income"]
+INCOME_CATEGORIES = ["Salary", "Dividend income", "Other income"]
 # Categories that are kept out of every rollup (breakdown, dashboard, charts) whatever their flow — book-keeping noise.
 HIDDEN_CATEGORIES = ["Bank internal transfers"]
 POCKET_CHANGE = "Pocket change"
@@ -83,6 +83,7 @@ SUBCATEGORIES: dict[str, list[str]] = {
     "Pocket change": [],
     "Salary": [],
     "Dividend income": [],
+    "Other income": [],
     "Bank internal transfers": [],
 }
 SUBCATEGORY_CUSTOM = "__custom__"
@@ -104,6 +105,7 @@ CATEGORY_STYLE = {
     "Pocket change": ("pocket", "coins", "#EEF0EA", "#4B5A52"),
     "Salary": ("salary", "banknote", "#E1F4F0", "#0F6E5C"),
     "Dividend income": ("dividend", "hand-coins", "#E8EEF9", "#2C5D8F"),
+    "Other income": ("other-income", "percent", "#E3F1F6", "#1F6E86"),
     "Bank internal transfers": ("bank-transfer", "arrow-left-right", "#EEF0EE", "#5C6B63"),
 }
 # Free-text categories created from Review that aren't in the list above.
@@ -1087,7 +1089,7 @@ DEFAULT_RULES = [
     ("Nanny salary", "regex", r"SENTIMPS.*NANNY NAME", None, "Home & Utilities", "Household Help & Services", "fixed", "spend", 0.9),
     ("Home loan EMI (Jananiya)", "regex", r"NEFT.*JANANIYA R/BANK OF", None, "Home & Utilities", "Loan EMI", "fixed", "spend", 0.9),
     ("Transfers in", "description_contains", "IFT PAYMENT|UPI/MR S VIJAY", None, None, None, "excluded", "transfer", 0.8),
-    ("Salary", "description_contains", "EMPLOYER PAYROLL", None, "Salary", None, "excluded", "income", 0.95),
+    ("Salary", "description_contains", "EMPLOYER PAYROLL|TIGER ANALYTICS|TIGERANALYTI", None, "Salary", None, "excluded", "income", 0.95),
     ("Dividend income", "description_contains", "NACH-ECS-CR|NACH-10-CR", None, "Dividend income", None, "excluded", "income", 0.9),
     ("Interest received", "description_contains", "INT.PD:", None, None, None, "excluded", "income", 0.9),
     ("Income tax refund", "description_contains", "ITDTAX REFUND", None, None, None, "excluded", "income", 0.9),
@@ -1155,6 +1157,8 @@ RULE_UPDATES = [
     ("rule_salary", {"category": "Salary"}),
     ("rule_dividends___interest", None),  # split into "Dividend income" + "Interest received"
     ("rule_fd_auto_sweep", {"category": "Bank internal transfers"}),
+    # Axis review 2026-08: savings interest surfaces as "Other income" instead of uncategorised.
+    ("rule_interest_received", {"category": "Other income"}),
 ]
 
 TAXONOMY_MIGRATIONS = [

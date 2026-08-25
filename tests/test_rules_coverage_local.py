@@ -18,8 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATASETS = [
     ("kotak", ROOT / "experiments" / "transactions.csv", 0.88),
     ("diners", ROOT / "experiments" / "transactions_diners.csv", 0.98),
-    # Raise to 1.0 once the reviewed Axis rules (salary NEFT) are folded into DEFAULT_RULES.
-    ("axis", ROOT / "experiments" / "transactions_axis.csv", 0.5),
+    ("axis", ROOT / "experiments" / "transactions_axis.csv", 1.0),
 ]
 
 
