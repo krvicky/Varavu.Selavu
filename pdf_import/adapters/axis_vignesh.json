@@ -1,0 +1,33 @@
+{
+  "source_id": "axis_vignesh",
+  "bank_label": "Axis Bank",
+  "schema_version": 1,
+  "statement_type": "bank_account",
+  "header_signature": ["Tran Date", "Particulars", "Balance"],
+  "column_map": {
+    "date": 0,
+    "time": null,
+    "description": 2,
+    "reference": 1,
+    "debit": 3,
+    "credit": 4,
+    "amount": null,
+    "dr_cr_flag": null,
+    "balance": 5
+  },
+  "date_format": "%d-%m-%Y",
+  "amount_convention": "separate_debit_credit",
+  "decimal_style": "indian",
+  "wrap_merge": "empty_date_row_appends_to_previous_description",
+  "skip_row_patterns": ["Tran Date", "OPENING BALANCE", "TRANSACTION TOTAL", "CLOSING BALANCE", "Page \\d+"],
+  "statement_meta": {
+    "period_regex": "From\\s*:\\s*(\\d{2}-\\d{2}-\\d{4})\\s*To\\s*:\\s*(\\d{2}-\\d{2}-\\d{4})",
+    "opening_balance_regex": "OPENING BALANCE\\D*([\\d,]+\\.\\d{2})",
+    "closing_balance_regex": "CLOSING BALANCE\\D*([\\d,]+\\.\\d{2})",
+    "previous_balance_regex": null,
+    "total_dues_regex": null,
+    "account_number_regex": "Axis Account No\\s*:?\\s*(\\d+)",
+    "balance_source": "running_balance",
+    "transaction_order": "ascending"
+  }
+}

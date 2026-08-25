@@ -31,6 +31,7 @@ from pdf_import.docling_pipeline import parse_pdf  # noqa: E402
 
 FOLDER_ADAPTERS = {
     "01_Kotak": ("kotak_vignesh", "Vignesh Kotak Bank"),
+    "03_Axis": ("axis_vignesh", "Vignesh Axis Bank"),
     "04_Diners": ("hdfc_diners_vignesh", "Vignesh HDFC Diners"),
 }
 FIELDS = [

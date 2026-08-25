@@ -1,4 +1,11 @@
+import json
+from pathlib import Path
+
 from pdf_import.adapter_engine import apply_adapter
+from pdf_import.reconcile import reconcile_or_unavailable
+from pdf_import.schema import validate_adapter
+
+ADAPTERS_DIR = Path(__file__).resolve().parents[2] / "pdf_import" / "adapters"
 
 
 def _config(**overrides):
@@ -282,6 +289,42 @@ def test_running_balance_derivation_when_no_opening_closing_text_present():
     meta = result["statement_meta"]
     assert meta["closing_balance"] == 9500.0
     assert meta["opening_balance"] == 9200.0
+
+
+def test_axis_adapter_config_handles_real_statement_layout():
+    # Uses the SHIPPED axis_vignesh.json (not a synthetic config) against an
+    # Axis-shaped table. Axis quirks: OPENING/CLOSING BALANCE and TRANSACTION
+    # TOTAL are table rows with blank dates, and the balance-row label is
+    # repeated into the Debit/Credit cells -- they must be skipped, never
+    # parsed as transactions or wrap-merged into a real description.
+    config = json.loads((ADAPTERS_DIR / "axis_vignesh.json").read_text(encoding="utf-8"))
+    assert validate_adapter(config) == []
+    table = [
+        ["Tran Date", "Chq No", "Particulars", "Debit", "Credit", "Balance", "Init. Br"],
+        ["", "", "OPENING BALANCE", "OPENING BALANCE", "OPENING BALANCE", "10000.00", "10000.00"],
+        ["01-07-2026", "", "SB:000000000000000:Int.Pd:01-04-2026 to 30- 06-2026", "", "100.00", "10100.00", "258"],
+        ["15-07-2026", "", "UPI/P2M/519912345678/SOME MERCHANT", "250.00", "", "9850.00", "248"],
+        ["", "", "TRANSACTION TOTAL", "250.00", "100.00", "", ""],
+        ["", "", "CLOSING BALANCE", "CLOSING BALANCE", "CLOSING BALANCE", "9850.00", ""],
+    ]
+    text = (
+        "Statement of Axis Account No :916010001977067 for the period (From : 01-07-2026  To : 31-07-2026)\n"
+        "| | | OPENING BALANCE | OPENING BALANCE | OPENING BALANCE | 10000.00 | 10000.00 |\n"
+        "| | | CLOSING BALANCE | CLOSING BALANCE | CLOSING BALANCE | 9850.00 | |\n"
+    )
+    result = apply_adapter(table, text, config)
+    txns = result["transactions"]
+    assert [t["amount"] for t in txns] == [100.0, -250.0]
+    assert [t["date"] for t in txns] == ["2026-07-01", "2026-07-15"]
+    assert result["unparsed_rows"] == []
+    meta = result["statement_meta"]
+    assert meta["period_start"] == "01-07-2026"
+    assert meta["period_end"] == "31-07-2026"
+    assert meta["opening_balance"] == 10000.0
+    assert meta["closing_balance"] == 9850.0
+    assert meta["account_number"] == "916010001977067"
+    recon = reconcile_or_unavailable(txns, meta["opening_balance"], meta["closing_balance"])
+    assert recon["status"] == "ok"
 
 
 def test_blank_description_cell_falls_back_to_unclaimed_text_cell():

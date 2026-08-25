@@ -74,6 +74,25 @@ def test_kotak_reimport_is_deterministic():
     assert [t["date"] for t in first["transactions"]] == [t["date"] for t in second["transactions"]]
 
 
+AXIS_SAMPLES = [
+    ("bank_statements_for_testing/03_Axis/2026_07.pdf", 2),
+]
+
+
+@pytest.mark.parametrize("relative_path,expected_txn_count", AXIS_SAMPLES)
+def test_axis_sample_reconciles_with_expected_transaction_count(relative_path, expected_txn_count):
+    config = _load_adapter("axis_vignesh")
+    result = _parse(ROOT / relative_path, config)
+    assert len(result["transactions"]) == expected_txn_count
+    assert result["unparsed_rows"] == []
+    meta = result["statement_meta"]
+    recon = reconcile_or_unavailable(
+        result["transactions"], meta["opening_balance"], meta["closing_balance"]
+    )
+    assert recon["status"] == "ok"
+    assert result["ocr_used"] is False
+
+
 DINERS_SAMPLES = [
     ("bank_statements_for_testing/04_Diners/Diners_05-2026.pdf", 87),
     ("bank_statements_for_testing/04_Diners/Diners_06-2026.pdf", 109),

@@ -103,6 +103,11 @@ def merchant_key(desc: str) -> str:
         return _clean(re.sub(r"FOR .*$", "", u.split(":", 1)[1]))
     if u.startswith("NEFT") and "EMPLOYER PAYROLL" in u:
         return "EMPLOYER PAYROLL SALARY"
+    # Axis incoming NEFT: "NEFT/<reference>/<counterparty>/<bank>/<remarks>" --
+    # the reference changes every month, so key on the counterparty field.
+    m = re.match(r"^NEFT/[A-Z0-9]+/(.+?)/", u)
+    if m:
+        return ("NEFT " + _clean(m.group(1))[:20]).strip()
     if "ITDTAX REFUND" in u or "IT REFUND" in u:
         return "INCOME TAX REFUND"
     if u.startswith("SENTIMPS"):
@@ -113,7 +118,7 @@ def merchant_key(desc: str) -> str:
         return "NEFT " + " ".join(toks[:2])
     if u.startswith("KR, TT") and "INDMONE" in u:
         return "INDMONEY USD REMITTANCE"
-    if u.startswith("INT.PD"):
+    if u.startswith("INT.PD") or ":INT.PD:" in u:
         return "SAVINGS INTEREST"
     if u.startswith("MB:") or u.startswith("IB:"):
         return _clean(u[3:])
